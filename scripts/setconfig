@@ -1,0 +1,58 @@
+#!/bin/sh
+##	setconfig	(c)2005-2006 William Towle
+##	Last modified	09/10/2006, WmT
+##	Purpose		Identify current config file
+#
+#   Open Source software - copyright and GPLv2 apply. Briefly:
+#	- No warranty/guarantee of fitness, use is at own risk
+#	- No restrictions on strictly-private use/copying/modification
+#	- This license must apply also to all modified/derived works
+#	- Redistributing? Include/offer to deliver original source
+#   Philosophy/full details at http://www.gnu.org/copyleft/gpl.html
+
+TOPLEV=`pwd`
+CONFIGDIR=${TOPLEV}/config
+
+set_link()
+{
+	TARGET=$1
+	shift
+
+	if [ -z "$1" ] ; then
+		echo "$0: set_link: Expected FILE" 1>&2
+		exit 1
+	elif [ ! -f "$1" ] ; then
+		if [ -d "$1" ] ; then
+			echo "$0: set_link: Expected existing file - $1 is directory" 1>&2
+			exit 1
+		else
+			echo "$0: set_link: Expected existing file - $1 symlink/missing" 1>&2
+			exit 1
+		fi
+	fi
+
+	FILE=$1
+	shift
+
+	( cd ${CONFIGDIR} && ln -sf `echo ${FILE} | sed 's/.*config\///'` ${TARGET} )
+}
+
+ACTION=$1
+[ "$1" ] && shift
+set_link index.lst ${ACTION}
+#case ${ACTION} in
+#boot)	## set 'boot' configuration link
+#	set_link boot.cfg $* || exit 1
+#;;
+#utils)	## set 'utils' configuration link
+#	set_link utils.cfg $* || exit 1
+#;;
+#*)
+#	if [ -n "${ACTION}" -a "${ACTION}" != 'help' ] ; then
+#		echo "$0: Unrecognised command '${ACTION}'" 1>&2
+#	fi
+#	echo "$0: Usage:" 1>&2
+#	grep "^[0-9a-z-]*)" $0 | sed "s/^/	/" 1>&2
+#	exit 1
+#;;
+#esac

@@ -1,0 +1,116 @@
+#!/bin/sh
+##	listfile-emit	(c)2006 William Towle
+##	Last modified	18/10/2006, WmT
+##	Purpose		Filter listfile content 
+#
+#   Open Source software - copyright and GPLv2 apply. Briefly:
+#	- No warranty/guarantee of fitness, use is at own risk
+#	- No restrictions on strictly-private use/copying/modification
+#	- This license must apply also to all modified/derived works
+#	- Redistributing? Include/offer to deliver original source
+#   Philosophy/full details at http://www.gnu.org/copyleft/gpl.html
+
+
+pare_lstfile()
+{
+	# strip comments to EOL; remove blank lines 
+	sed ':a ; s/^[ 	]*#.*// ; /^$/ { N ; s/\n// } ; ta' ${*} | grep .
+}
+
+emit_directives()
+{
+	FILE=$1
+	if [ ! -r ${FILE} ] ; then
+		echo "$0: FILE ${FILE} not found" 1>&2
+		exit 1
+	fi
+
+	pare_lstfile ${FILE} | while read LINE ; do
+		set -- ${LINE}
+		case ${1} in
+		ARCHIVE|INSTALL)	echo "${LINE}"
+		;;
+		esac
+	done
+}
+
+emit_packages()
+{
+	FILE=$1
+	if [ ! -r ${FILE} ] ; then
+		echo "$0: FILE ${FILE} not found" 1>&2
+		exit 1
+	fi
+
+	pare_lstfile ${FILE}
+}
+
+do_emit_urls()
+{
+	FILE=$1
+	if [ ! -r ${FILE} ] ; then
+		echo "$0: FILE ${FILE} not found" 1>&2
+		exit 1
+	fi
+
+	pare_lstfile ${FILE} | while read LINE ; do
+		set -- ${LINE}
+		case ${1} in
+		URL)	echo "${LINE}"
+		;;
+		esac
+	done
+}
+
+
+do_emit_packages()
+{
+	if [ -z "$1" ] ; then
+		echo "$0: do_emit(): expected file(s)" 1>&2
+		exit 1
+	fi
+
+	while [ "$1" ] ; do
+		FILE=$1
+		shift
+
+		emit_packages ${FILE}
+	done
+}
+
+do_emit_directives()
+{
+	if [ -z "$1" ] ; then
+		echo "$0: do_emit(): expected file(s)" 1>&2
+		exit 1
+	fi
+
+	while [ "$1" ] ; do
+		FILE=$1
+		shift
+
+		emit_directives ${FILE}
+	done
+}
+
+ACTION=$1
+[ "$1" ] && shift
+case ${ACTION} in
+packages)	## emit list of packages
+	do_emit_packages $* || exit 1
+;;
+directives)	## emit directives for package
+	do_emit_directives $* || exit 1
+;;
+urls)		## emit URLs for package
+	do_emit_urls $* || exit 1
+;;
+*)
+	if [ -n "${ACTION}" -a "${ACTION}" != 'help' ] ; then
+		echo "$0: Unrecognised command '${ACTION}'" 1>&2
+	fi
+	echo "$0: Usage:" 1>&2
+	grep "^[0-9a-z-]*)" $0 | sed "s/^/	/" 1>&2
+	exit 1
+;;
+esac

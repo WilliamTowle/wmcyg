@@ -1,0 +1,57 @@
+#!/bin/sh
+##	archive		(c)2006 William Towle
+##	Last modified	09/10/2006, WmT
+##	Purpose		Generate 'wmcyg' archives
+#
+#   Open Source software - copyright and GPLv2 apply. Briefly:
+#	- No warranty/guarantee of fitness, use is at own risk
+#	- No restrictions on strictly-private use/copying/modification
+#	- This license must apply also to all modified/derived works
+#	- Redistributing? Include/offer to deliver original source
+#   Philosophy/full details at http://www.gnu.org/copyleft/gpl.html
+
+WHEN=`date +%y%m%d`
+
+make_config()
+{
+	ARCHIVE=wmcyg-config-`date +%y%m%d`.tgz
+	echo -n "${ARCHIVE}: "
+	tar cvzf ${ARCHIVE} config scripts | while read FILE ; do echo -n '.' ; done
+	echo
+}
+
+make_files()
+{
+	ARCHIVE=wmcyg-files-`date +%y%m%d`.tgz
+	echo -n "${ARCHIVE}: "
+	tar cvzf ${ARCHIVE} files | while read FILE ; do echo -n '.' ; done
+	echo
+}
+
+make_all()
+{
+	make_config
+	make_files
+}
+
+ACTION=$1
+[ "$1" ] && shift
+case $ACTION in
+all)		## make all archives
+	make_all $* || exit 1
+;;
+config) 	## make 'config' (and scripts) archive
+	make_config $* || exit 1
+;;
+files)		## make 'files' archive
+	make_files || exit 1
+;;
+*)
+	if [ -n "${ACTION}" -a "${ACTION}" != 'help' ] ; then
+		echo "$0: Unrecognised command '${ACTION}'"
+	fi
+	echo "$0: Usage:"
+	grep "^[0-9a-z]*)" $0 | sed "s/^/	/"
+	exit 1
+;;
+esac

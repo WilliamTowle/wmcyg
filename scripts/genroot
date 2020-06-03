@@ -1,0 +1,102 @@
+#!/bin/sh
+##	genroot		(c)2006 William Towle
+##	Last modified	12/10/2006, WmT
+##	Purpose		Generate rootfs tree
+#
+#   Open Source software - copyright and GPLv2 apply. Briefly:
+#	- No warranty/guarantee of fitness, use is at own risk
+#	- No restrictions on strictly-private use/copying/modification
+#	- This license must apply also to all modified/derived works
+#	- Redistributing? Include/offer to deliver original source
+#   Philosophy/full details at http://www.gnu.org/copyleft/gpl.html
+
+TOPLEV=`pwd`
+SCRIPTDIR=`dirname $0`
+CONFIGDIR=${TOPLEV}/config
+INDEXFILE=${CONFIGDIR}/index.lst
+
+do_validate()
+{
+	if [ ! -r ${INDEXFILE} ] ; then
+		echo "$0: ERROR: INDEXFILE ${INDEXFILE} missing" 1>&2
+		exit 1
+	fi
+
+	true
+}
+
+add_escapes()
+{
+	echo "$*" | sed 's/[[]/\\&/g'
+}
+
+do_install()
+{
+	ARCHIVE=$1
+	SOURCE=$2
+	TARGET=$3
+	ROOTDIR=$4
+
+	TMPDIR=/tmp/tmp.$$
+
+	mkdir ${TMPDIR} || exit 1
+	bzcat ${ARCHIVE} | tar xvf - -C ${TMPDIR} `add_escapes ${SOURCE}`
+	mkdir -p ${ROOTDIR}/`dirname ${TARGET}`
+	mv ${TMPDIR}/${SOURCE} ${ROOTDIR}/${TARGET}
+	rm -rf ${TMPDIR}
+}
+
+do_extract()
+{
+	PKGNAME=$1
+	PKGVER=$2
+	ROOTDIR=$3
+
+	CFGFILE=${CONFIGDIR}/package/${PKGNAME}/v${PKGVER}.cfg
+	ARCHIVE=''
+
+	echo "[ ${PKGNAME} ${PKGVER} ]"
+	${SCRIPTDIR}/listfile-emit directives ${CFGFILE} | while read LINE ; do
+		set -- ${LINE}
+		case ${1} in
+		ARCHIVE)
+			ARCHIVE=files/${PKGNAME}/${2}
+			if [ ! -f ${ARCHIVE} ] ; then
+				echo "Bad ARCHIVE: ${2} not found" 1>&2
+				exit 1
+			fi
+		;;
+		INSTALL)
+			do_install ${ARCHIVE} ${2} ${3} ${ROOTDIR}
+		;;
+		*)		echo "Bad directive ${1}" 1>&2
+				exit 1
+		;;
+		esac
+	done || exit 1
+}
+
+do_genroot()
+{
+	ROOTDIR=$1
+	if [ -z "${ROOTDIR}" ] ; then
+		echo "$0: ERROR: No ROOTDIR supplied" 1>&2
+		exit 1
+	elif [ ! -d ${ROOTDIR} ] ; then
+		echo "$0: ERROR: ROOTDIR ${ROOTDIR} not directory" 1>&2
+		exit 1
+	fi
+
+	${SCRIPTDIR}/listfile-emit packages ${INDEXFILE} | while read LINE ; do
+		set -- ${LINE}
+		do_extract ${1} ${2} ${ROOTDIR}
+	done || exit 1
+
+	echo "[ scripts ]"
+	for SF in ${SCRIPTDIR}/root/* ; do
+		echo `basename ${SF}`
+		cp ${SF} ${ROOTDIR}
+	done || exit 1
+}
+
+do_genroot $*
